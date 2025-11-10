@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { signIn, setupGoogleSheets } from '../services/googleApiService';
+import { initGoogleClient, signIn, setupGoogleSheets } from '../services/googleApiService';
 import { LoaderIcon } from './icons';
 
 interface LoginProps {
@@ -25,6 +25,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         setError('');
         setStatus('Initializing...');
         try {
+            await initGoogleClient();
             setStatus('Please sign in with your Google Account...');
             await signIn();
             setStatus('Sign in successful! Setting up sheets...');
@@ -33,7 +34,8 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             onLoginSuccess(sheetIds);
         } catch (err: any) {
             console.error("Login or setup failed:", err);
-            setError(`Login failed. ${err.details || 'Please try again.'}`);
+            const errorDetails = err.result ? JSON.stringify(err.result, null, 2) : (err.message || err.details || JSON.stringify(err, null, 2));
+            setError(`Login failed. Please see the details below:\n${errorDetails}`);
             setIsLoading(false);
             setStatus('');
         }
@@ -61,7 +63,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 </div>
             )}
             
-            {error && <p className="mt-4 text-red-500">{error}</p>}
+            {error && <pre className="mt-4 text-red-500 text-left bg-gray-800 p-4 rounded-md whitespace-pre-wrap">{error}</pre>}
         </div>
     );
 };

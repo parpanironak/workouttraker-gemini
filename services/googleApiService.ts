@@ -14,8 +14,8 @@ const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID as string;
 const API_KEY = process.env.API_KEY as string;
 
 const DISCOVERY_DOCS = [
-    "https://www.googleapis.com/discovery/v1/apis/drive/v3/rest",
-    "https://www.googleapis.com/discovery/v1/apis/sheets/v4/rest"
+    'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest',
+    'https://sheets.googleapis.com/$discovery/rest?version=v4'
 ];
 const SCOPES = "https://www.googleapis.com/auth/drive.file";
 
@@ -38,41 +38,72 @@ export const HISTORY_SHEET_HEADERS = [
 let gapi: any;
 let google: any;
 let tokenClient: any;
+let isGapiInitialized = false;
 
-export const initGoogleClient = (): Promise<void> => {
+const waitForGlobal = <T>(name: string, timeout = 15000): Promise<T> => {
     return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = 'https://apis.google.com/js/api.js';
-        document.body.appendChild(script);
-        script.onload = () => {
-            gapi = window.gapi;
-            gapi.load('client', async () => {
-                await gapi.client.init({
-                    apiKey: API_KEY,
-                    discoveryDocs: DISCOVERY_DOCS,
-                });
-                const gisScript = document.createElement('script');
-                gisScript.src = 'https://accounts.google.com/gsi/client';
-                document.body.appendChild(gisScript);
-                gisScript.onload = () => {
-                    google = window.google;
+        let waited = 0;
+        const interval = 100;
+
+        const check = () => {
+            if ((window as any)[name]) {
+                return resolve((window as any)[name]);
+            }
+
+            waited += interval;
+            if (waited >= timeout) {
+                return reject(new Error(`Timed out waiting for global script '${name}' to load.`));
+            }
+            setTimeout(check, interval);
+        };
+        check();
+    });
+};
+
+export const initGoogleClient = async (): Promise<void> => {
+    if (isGapiInitialized) return;
+
+    try {
+        gapi = await waitForGlobal("gapi");
+        google = await waitForGlobal("google");
+        await new Promise<void>((resolve, reject) => {
+            gapi.load("client",
+            "890401240655-n3tkbvd9srdk01uk8ti1u7b2cgmr6av3.apps.googleusercontent.com", async () => {
+                try {
+                    await gapi.client.init({
+                        apiKey: API_KEY,
+                        discoveryDocs: DISCOVERY_DOCS,
+                    });
+
                     tokenClient = google.accounts.oauth2.initTokenClient({
                         client_id: GOOGLE_CLIENT_ID,
                         scope: SCOPES,
-                        callback: '', // handled by promise
+                        callback: () => {
+
+                        }, // you'll override later
                     });
+
+                    isGapiInitialized = true;
                     resolve();
-                };
+                } catch (err) {
+                    reject(err);
+                }
             });
-        };
-        script.onerror = reject;
-    });
+        });
+
+    } catch (err) {
+        console.error("Failed to initialize Google API", err);
+        throw err;
+    }
 };
 
 export const signIn = (): Promise<void> => {
     return new Promise((resolve, reject) => {
         tokenClient.callback = (resp: any) => {
-            if (resp.error) reject(resp);
+            if (resp.error) {
+                console.error("Error during sign in:", resp);
+                reject(resp);
+            }
             resolve();
         };
         tokenClient.requestAccessToken({ prompt: 'consent' });

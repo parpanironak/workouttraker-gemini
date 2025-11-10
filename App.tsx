@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { fetchTemplatesFromSheet, saveWorkoutToSheet } from './services/googleSheetsService';
-import { initGoogleClient } from './services/googleApiService';
 import type { WorkoutTemplate, WorkoutGroup, Exercise, ExerciseTemplate } from './types';
 import { SetStatus, ExerciseStatus } from './types';
 import TemplateSelection from './components/TemplateSelection';
@@ -58,13 +57,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
-  const [apiReady, setApiReady] = useState<boolean>(false);
   const [sheetIds, setSheetIds] = useState<{ templatesSheetId: string; historySheetId: string; } | null>(null);
-
-
-  useEffect(() => {
-    initGoogleClient().then(() => setApiReady(true));
-  }, []);
   
   useEffect(() => {
     try {
@@ -145,15 +138,6 @@ const App: React.FC = () => {
       setView('TEMPLATE_SELECTION');
   }, []);
   
-  if (!apiReady) {
-    return (
-      <div className="flex flex-col items-center justify-center h-screen">
-        <LoaderIcon className="w-12 h-12 text-cyan-400"/>
-        <p className="mt-4 text-lg text-gray-400">Initializing Google API...</p>
-      </div>
-    );
-  }
-
   if (!isLoggedIn) {
       return <Login onLoginSuccess={handleLoginSuccess} />;
   }
