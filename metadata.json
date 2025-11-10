@@ -1,0 +1,5 @@
+{
+  "name": "Gemini Workout Tracker",
+  "description": "A smart workout tracker application powered by the Gemini API. It helps you select workout templates, track your exercises, and provides insightful summaries and stats for your sessions.",
+  "requestFramePermissions": []
+}
